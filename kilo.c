@@ -5,8 +5,13 @@
 #include <unistd.h>
 #include <stdlib.h>
 
+/*** defines ***/
+#define CTRL_KEY(k) ((k) & 0x1f)
+
+/*** data ***/
 struct termios orig_termios; 
 
+/*** terminal ***/
 void die(const char *s) {
     perror(s); 
     exit(1); 
@@ -29,20 +34,31 @@ void enableRawMode(void) {
     raw.c_cc[VMIN] = 0; 
     raw.c_cc[VTIME] = 10; 
 
-    tcsetattr(STDERR_FILENO, TCSAFLUSH, &raw);
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) die("tcsetattr");
 }
 
+char editorReadKey() {
+    int nread; 
+    char c; 
+    while ((nread = read(STDIN_FILENO, &c, 1)) != 1) {
+        if (nread == -1 && errno != EAGAIN) die ("read"); 
+    }
+    return c; 
+}
+
+
+/*** init ***/
 int main(void) { 
     enableRawMode(); 
     while (1) {
         char c = '\0'; 
-        read(STDIN_FILENO, &c, 1); 
+        if (read(STDIN_FILENO, &c, 1) == -1 && errno != EAGAIN) die("read");
         if (iscntrl(c)) {
             printf("%d\r\n", c); 
         } else {
             printf("%d ('%c')\r\n", c, c);
         }
-        if (c == 'q') break; 
+        if (c == CTRL_KEY('q')) break; 
     }                                                            
     return 0; 
     
