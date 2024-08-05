@@ -4,6 +4,7 @@
 #include <termios.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/ioctl.h> 
 
 /*** defines ***/
@@ -62,7 +63,9 @@ char editorReadKey(void) {
 int getCursorPosition(int *rows, int *cols) {
   char buf[32];
   unsigned int i = 0;
+
   if (write(STDOUT_FILENO, "\x1b[6n", 4) != 4) return -1;
+
   while (i < sizeof(buf) - 1) {
     if (read(STDIN_FILENO, &buf[i], 1) != 1) break;
     if (buf[i] == 'R') break;
@@ -86,6 +89,25 @@ int getWindowSize(int *rows, int *cols) {
         *rows = ws.ws_row; 
         return 0; 
     }
+}
+
+/*** append buffer ***/
+
+struct abuf { 
+    char *b; 
+    int len; 
+}; 
+
+#define ABUF_INIT {NULL, 0} 
+
+/*adds new string to an existing buffer*/
+void abAppend(struct abuf *buffer, const char *appendString, int appendLength) {
+    char *newBuffer = realloc(buffer->b, buffer->len + appendLength); 
+
+    if (newBuffer == NULL) return; 
+    memcpy(newBuffer + buffer->len, appendString, appendLength);  
+    buffer->b = newBuffer; 
+    buffer->len += appendLength; 
 }
 
 /*** output ***/
